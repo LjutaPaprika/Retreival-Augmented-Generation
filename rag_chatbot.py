@@ -1,11 +1,8 @@
 # Various Imports
 import os
-import sys
 import shutil
 
 import gradio as gr
-
-from pathlib import Path
 
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.vectorstores.chroma import Chroma
@@ -13,18 +10,20 @@ from langchain_community.llms import OpenAI
 from langchain_openai import ChatOpenAI
 from langchain_openai import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.chains import ConversationalRetrievalChain # conversational for memory
+from langchain.chains import ConversationalRetrievalChain
 
 # OpenAI API Key -- replace "..." with key
 os.environ["OPENAI_API_KEY"] = "..."
 
 # Directory from which to pull documents
-directory_str = "/Users/Vuk/Desktop/Take Home/Documents/"
+directory_str = "/Users/Vuk/Desktop/Take Home/Documents"
 # Directory to store persistent vector embeddings (PVE)
 vector_storage = "/Users/Vuk/Desktop/Take Home Code/persist_dir"
 
 # When True, vector database will always be regenerated
 override = True
+
+
 
 # Function to check if a PVE storage exists at a given directory path
 def exists(vector_storage_path):
@@ -42,19 +41,20 @@ def make_vector_storage(vector_storage_path, d_directory):
     # Loop through all files in the documents directory
     for file in os.listdir(d_directory):
         # Get the full path of the file
-        file_path = os.path.join(d_directory, file)
+        # file_path = os.path.join(d_directory, file)
+        file_path = str(d_directory) + "/" + str(file)
         # Create PyPDFLoader
         loader = PyPDFLoader(file_path)
         # Load the document into a list
-        documents = loader.load()
+        document = loader.load()
         # Add the document to the previous list
-        docs.extend(documents)
+        docs.extend(document)
 
     # Recursively split the text from all of the documents
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    documents = text_splitter.split_documents(docs)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=0, separators="\n")
+    split_docs = text_splitter.split_documents(docs)
     # Create a Chroma storage space for the vector embeddings from the documents
-    vector_db = Chroma.from_documents(docs, embedding=OpenAIEmbeddings(), persist_directory=vector_storage_path)
+    vector_db = Chroma.from_documents(split_docs, embedding=OpenAIEmbeddings(), persist_directory=vector_storage_path)
     # Push to the PVE storage
     vector_db.persist()
     # Return the vector database
@@ -71,6 +71,8 @@ def delete_vector_storage(vector_storage_path):
         print("Directory does not exist")
     except Exception as e:
         print(f"An error occurred: {str(e)}")
+
+
 
 # If block to handle cases for the existence and override logic for the PVE storage
 if override:
@@ -89,6 +91,8 @@ else:
         # No override and does not exist
         vector_db = make_vector_storage(vector_storage, directory_str) # documents_directory
 
+
+
 # Create the conversational chain of the RAG, using the generated vector embeddings 
 qa_chain = ConversationalRetrievalChain.from_llm(ChatOpenAI(temperature=0.9, model_name="gpt-3.5-turbo"), vector_db.as_retriever(search_kwargs={'k': 5}), return_source_documents=False, verbose=False)
 
@@ -101,10 +105,10 @@ with gr.Blocks() as demo:
 
     # Function for uploading user files
     def upload_file(file):
-        # Get a string of the user file, handle occasional "\"
-        file_path = str(file).replace("\\", "/")[2:]
+        # Get path of the uploaded file
+        file_path = str(file).replace("\\", "/")
         # Copy the contents of the file from a temp folder (controlled by gradio) to the location we want
-        new_loc = "/Users/Vuk/Desktop/Take Home/Uploads/"
+        new_loc = "/Users/Vuk/Desktop/Take Home/Uploads"
         shutil.copy(file_path, new_loc)
         # Remake the vector storage*
         vector_db = make_vector_storage(vector_storage, new_loc)
@@ -122,7 +126,7 @@ with gr.Blocks() as demo:
         upload_button.upload(upload_file, upload_button, file_output)
 
     # List some examples to prompt users
-    examples = gr.Examples(examples=["What are the steps in refueling without DC power?", "Where is the no smoking switch located?"], inputs=[msg])
+    examples = gr.Examples(examples=["What are the steps in refueling without DC power?", "Where is the NO SMOKING switch located?", "List all switches located on the front overhead panel.", "Summarize the purpose of battery chargers in detail."], inputs=[msg])
 
     # List for storing conversational history between user and AI
     chat_history = []
@@ -135,8 +139,16 @@ with gr.Blocks() as demo:
         chat_history.append((user_message, result["answer"]))
         # return resulting value and clear user textbox
         return gr.update(value=""), chat_history
-    msg.submit(generate, [msg, chatbot], [msg, chatbot], queue=False)
+
+    msg.submit(generate, [msg, chatbot], [msg, chatbot], queue=False) # .then(bot, chatbot, chatbot)
     clear.click(lambda: None, None, chatbot, queue=False)
 
 # Create the webapp
 demo.launch(debug=True) 
+
+
+# history[-1][1] = ""
+# for character in bot_message:
+#   history[-1][1] += character
+#   time.sleep(0.05)
+#   yield history
