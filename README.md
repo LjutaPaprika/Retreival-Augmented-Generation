@@ -46,8 +46,9 @@ these failure cases?
 Bonus Tasks:
 1. Modify the chatbot to include citations in its response, identifying which pages and/or sections
 of the aircraft manual (if any) were used to answer a question.
-  - Unable to complete
-  - Due to the way the page numbering works (ie. chapter.section.page number -- 13.20.3) it was difficult to capture this information
+  - The use of the Recurisve Character Text Splitter maintains the page metadata, despite the unique numbering system of the document (and with the updated chunk size, it can reliably get the section)
+  - This also applies to the document being used -- uploading another document to draw information from still returns the correct document being sourced
+  - Currently the user must ask for this information on their own
 
 2. Included in the take-home is a second document, a report describing the events of an aircraft
 accident (AAR0102.pdf). Modify the chatbot to be able to answer questions related to this
