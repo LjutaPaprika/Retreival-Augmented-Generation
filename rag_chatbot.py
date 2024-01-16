@@ -13,16 +13,13 @@ from langchain_community.llms import OpenAI
 from langchain_openai import ChatOpenAI
 from langchain_openai import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.chains import RetrievalQA, ConversationalRetrievalChain # conversational for memory
+from langchain.chains import ConversationalRetrievalChain # conversational for memory
 
 # OpenAI API Key -- replace "..." with key
 os.environ["OPENAI_API_KEY"] = "..."
 
 # Directory from which to pull documents
-directory_str = "/Users/Vuk/Desktop/Take Home/Documents"
-documents_directory = os.fsencode(directory_str)
-# Add directory to path
-p = Path(directory_str)
+directory_str = "/Users/Vuk/Desktop/Take Home/Documents/"
 # Directory to store persistent vector embeddings (PVE)
 vector_storage = "/Users/Vuk/Desktop/Take Home Code/persist_dir"
 
@@ -44,10 +41,8 @@ def make_vector_storage(vector_storage_path, d_directory):
 
     # Loop through all files in the documents directory
     for file in os.listdir(d_directory):
-        # Encode each file
-        filename = os.fsdecode(file)
-        # Create the full file path, handle occasional "\" character
-        file_path = os.path.join(p, filename).replace("\\", "/")
+        # Get the full path of the file
+        file_path = os.path.join(d_directory, file)
         # Create PyPDFLoader
         loader = PyPDFLoader(file_path)
         # Load the document into a list
@@ -63,6 +58,7 @@ def make_vector_storage(vector_storage_path, d_directory):
     # Push to the PVE storage
     vector_db.persist()
     # Return the vector database
+    print("...DONE")
     return vector_db
 
 # Function to delete an existing PVE at a given directory path (vector_storage_path)
@@ -82,7 +78,7 @@ if override:
         # Override and already exists
         delete_vector_storage(vector_storage)
 
-    vector_db = make_vector_storage(vector_storage, documents_directory)
+    vector_db = make_vector_storage(vector_storage, directory_str) # documents_directory
 else:
     if exists(vector_storage):
         # No override and exists
@@ -91,7 +87,7 @@ else:
         pass
     else:
         # No override and does not exist
-        vector_db = make_vector_storage(vector_storage, documents_directory)
+        vector_db = make_vector_storage(vector_storage, directory_str) # documents_directory
 
 # Create the conversational chain of the RAG, using the generated vector embeddings 
 qa_chain = ConversationalRetrievalChain.from_llm(ChatOpenAI(temperature=0.9, model_name="gpt-3.5-turbo"), vector_db.as_retriever(search_kwargs={'k': 5}), return_source_documents=False, verbose=False)
@@ -103,16 +99,16 @@ with gr.Blocks() as demo:
     # Space for user input
     msg = gr.Textbox(label="Enter Questions Here")
 
-    # Location to store the newly uploaded user file -- same location as all the other files
-
     # Function for uploading user files
     def upload_file(file):
         # Get a string of the user file, handle occasional "\"
         file_path = str(file).replace("\\", "/")[2:]
         # Copy the contents of the file from a temp folder (controlled by gradio) to the location we want
-        shutil.copy(file_path, directory_str)
+        new_loc = "/Users/Vuk/Desktop/Take Home/Uploads/"
+        shutil.copy(file_path, new_loc)
         # Remake the vector storage*
-        vector_db = make_vector_storage(vector_storage, documents_directory)
+        vector_db = make_vector_storage(vector_storage, new_loc)
+        # vector_db.persist()
         return file_path
 
     with gr.Row():
@@ -124,9 +120,6 @@ with gr.Blocks() as demo:
         # Note: only allows one file at a time
         upload_button = gr.UploadButton("Click to Upload a File", file_types=["file"], file_count="single")
         upload_button.upload(upload_file, upload_button, file_output)
-
-        # Regenerate the AI
-        qa_chain = ConversationalRetrievalChain.from_llm(ChatOpenAI(temperature=0.9, model_name="gpt-3.5-turbo"), vector_db.as_retriever(search_kwargs={'k': 5}), return_source_documents=False, verbose=False)
 
     # List some examples to prompt users
     examples = gr.Examples(examples=["What are the steps in refueling without DC power?", "Where is the no smoking switch located?"], inputs=[msg])
