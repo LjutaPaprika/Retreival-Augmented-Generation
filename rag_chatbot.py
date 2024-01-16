@@ -13,7 +13,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import ConversationalRetrievalChain
 
 # OpenAI API Key -- replace "..." with key
-os.environ["OPENAI_API_KEY"] = "..."
+os.environ["OPENAI_API_KEY"] = "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"
 
 # Directory from which to pull documents
 directory_str = "/Users/Vuk/Desktop/Take Home/Documents"
@@ -51,7 +51,7 @@ def make_vector_storage(vector_storage_path, d_directory):
         docs.extend(document)
 
     # Recursively split the text from all of the documents
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=0, separators="\n")
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=0) # separators="\n"
     split_docs = text_splitter.split_documents(docs)
     # Create a Chroma storage space for the vector embeddings from the documents
     vector_db = Chroma.from_documents(split_docs, embedding=OpenAIEmbeddings(), persist_directory=vector_storage_path)
@@ -94,7 +94,8 @@ else:
 
 
 # Create the conversational chain of the RAG, using the generated vector embeddings 
-qa_chain = ConversationalRetrievalChain.from_llm(ChatOpenAI(temperature=0.9, model_name="gpt-3.5-turbo"), vector_db.as_retriever(search_kwargs={'k': 5}), return_source_documents=False, verbose=False)
+# Use one of the following models: gpt-3.5-turbo, gpt-4, gpt-4-32k
+qa_chain = ConversationalRetrievalChain.from_llm(ChatOpenAI(temperature=0.9, model_name="gpt-4"), vector_db.as_retriever(search_kwargs={'k': 5}), return_source_documents=False, verbose=False)
 
 # UI blocks
 with gr.Blocks() as demo:
@@ -145,10 +146,3 @@ with gr.Blocks() as demo:
 
 # Create the webapp
 demo.launch(debug=True) 
-
-
-# history[-1][1] = ""
-# for character in bot_message:
-#   history[-1][1] += character
-#   time.sleep(0.05)
-#   yield history
