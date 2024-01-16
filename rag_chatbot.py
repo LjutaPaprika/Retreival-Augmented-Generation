@@ -13,7 +13,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import ConversationalRetrievalChain
 
 # OpenAI API Key -- replace "..." with key
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = "..."
 
 # Directory from which to pull documents
 directory_str = "/Users/Vuk/Desktop/Take Home/Documents"
