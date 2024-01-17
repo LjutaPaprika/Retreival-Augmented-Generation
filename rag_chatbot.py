@@ -7,6 +7,7 @@ import gradio as gr
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.vectorstores.chroma import Chroma
 from langchain_community.llms import OpenAI
+from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_openai import ChatOpenAI
 from langchain_openai import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -21,7 +22,7 @@ directory_str = "/Users/Vuk/Desktop/Take Home/Documents"
 vector_storage = "/Users/Vuk/Desktop/Take Home Code/persist_dir"
 
 # When True, vector database will always be regenerated
-override = True
+override = False
 
 
 
@@ -51,7 +52,7 @@ def make_vector_storage(vector_storage_path, d_directory):
         docs.extend(document)
 
     # Recursively split the text from all of the documents
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=0) # separators="\n"
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=4000, chunk_overlap=0) # separators="\n"
     split_docs = text_splitter.split_documents(docs)
     # Create a Chroma storage space for the vector embeddings from the documents
     vector_db = Chroma.from_documents(split_docs, embedding=OpenAIEmbeddings(), persist_directory=vector_storage_path)
@@ -66,11 +67,11 @@ def delete_vector_storage(vector_storage_path):
     print("[-] REMOVING VECTOR STORAGE")
     try:
         shutil.rmtree(vector_storage_path)
-        print("Directory removed successfully")
+        print("[-] Directory removed successfully")
     except FileNotFoundError:
-        print("Directory does not exist")
+        print("[!] Directory does not exist")
     except Exception as e:
-        print(f"An error occurred: {str(e)}")
+        print(f"[!] An error occurred: {str(e)}")
 
 
 
